@@ -1,0 +1,13 @@
+name: Personal Terminal
+on: 
+  workflow_dispatch: # यह तुम्हें मैन्युअली बटन दबाकर टर्मिनल स्टार्ट करने देगा
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # तुम windows-latest या macos-latest भी लिख सकते हो
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Start tmate Session
+        uses: mxschmitt/action-tmate@v3
