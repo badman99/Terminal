@@ -51,7 +51,7 @@ jobs:
           
           def generate(prompt):
               # CPU के लिए 1-step काफी है
-              image = pipe(prompt=prompt, num_inference_steps=20, guidance_scale=7.5).images[0]
+              image = pipe(prompt=prompt, num_inference_steps=9, guidance_scale=7.5).images[0]
               return image
 
           print("--- Launching Badal's AI Interface ---")
