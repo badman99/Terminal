@@ -6,10 +6,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 🐍 Setup Python 3.10 (The Life Saver)
+      - name: 🐍 Setup Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10' # अब कोई एरर नहीं आएगा! 😎
+          python-version: '3.10'
 
       - name: 🚀 Maximize Memory (Swap)
         run: |
@@ -25,7 +25,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y ffmpeg
-          # Python 3.10 में --break-system-packages की ज़रूरत नहीं है
           pip install --upgrade pip
           pip install git+https://github.com/coqui-ai/TTS.git
           pip install gradio pydub
@@ -37,7 +36,7 @@ jobs:
           chmod +x bore
           sudo mv bore /usr/local/bin/
 
-      - name: 🎙️ Create Voice Cloning Script
+      - name: 🎙️ Create Voice Cloning Script (Auto-Agree Mode)
         run: |
           cat << 'EOF' > voice_app.py
           import gradio as gr
@@ -45,7 +44,10 @@ jobs:
           import torch
           import os
 
-          print("--- Loading XTTS-v2 Voice Model (Hindi Supported) ---")
+          # लाइसेंस एग्रीमेंट को ऑटो-एग्री करने का जुगाड़ 🤫
+          os.environ["COQUI_TOS_AGREED"] = "1"
+
+          print("--- Loading XTTS-v2 Voice Model ---")
           # मॉडल डाउनलोड और लोड हो रहा है
           tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to("cpu")
 
@@ -63,7 +65,7 @@ jobs:
           interface = gr.Interface(
               fn=clone_voice,
               inputs=[
-                  gr.Textbox(label="यहाँ वो लिखो जो तुम कहलवाना चाहते हो (Hindi)", placeholder="नमस्ते बादल भाई!"),
+                  gr.Textbox(label="यहाँ वो लिखो जो तुम कहलवाना चाहते हो (Hindi)", placeholder="नमस्ते बादल भाई! कैसे हो?"),
                   gr.Audio(label="6 सेकंड की ऑडियो क्लिप यहाँ डालो", type="filepath")
               ],
               outputs=gr.Audio(label="जनरेटेड आवाज़"),
@@ -74,6 +76,7 @@ jobs:
 
       - name: 🔥 Start Voice Server
         run: |
+          # अब ये लाइसेंस के लिए नहीं रुकेगा! 🚀
           python3 voice_app.py &
-          sleep 40
+          sleep 60
           bore local 7860 --to bore.pub
