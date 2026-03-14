@@ -1,0 +1,61 @@
+name: Badal-Unrestricted-AI-PC
+on: 
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚀 Maximize Memory (Swap Space)
+        run: |
+          sudo fallocate -l 6G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: 📦 Install System Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip python3-venv wget git libgl1 libglib2.0-0
+
+      - name: 🛠️ Install AI Libraries (Fast Mode)
+        run: |
+          pip install numpy diffusers transformers accelerate gradio pillow --break-system-packages --ignore-installed
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --break-system-packages
+
+      - name: 🌍 Setup Bore (Tunnel)
+        run: |
+          wget https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz
+          tar -xf bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz
+          chmod +x bore
+          sudo mv bore /usr/local/bin/
+
+      - name: ✍️ Create AI App Script
+        run: |
+          cat << 'EOF' > app.py
+          import torch
+          from diffusers import AutoPipelineForText2Image
+          import gradio as gr
+
+          # Using float16 and CPU optimization to save RAM
+          print("--- Loading Unrestricted AI Model (SDXL Turbo) ---")
+          pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo", torch_dtype=torch.float32)
+          
+          def generate(prompt):
+              # Fast 1-step generation for CPU
+              image = pipe(prompt=prompt, num_inference_steps=1, guidance_scale=0.0).images[0]
+              return image
+
+          print("--- Launching Badal's UI ---")
+          demo = gr.Interface(fn=generate, inputs="text", outputs="image", title="Badal's Unrestricted AI 🎨")
+          demo.launch(server_name="0.0.0.0", server_port=7860)
+          EOF
+
+      - name: 🔥 Start AI & Tunnel
+        run: |
+          # Start AI in background
+          python3 app.py &
+          sleep 10
+          # Connect Bore and show the link clearly
+          bore local 7860 --to bore.pub
