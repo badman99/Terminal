@@ -1,4 +1,4 @@
-name: Badal-Smart-Ghost-AI
+name: Badal-Voice-Clone-AI
 on: 
   workflow_dispatch:
 
@@ -16,18 +16,13 @@ jobs:
           sudo swapon /swapfile
           free -h
 
-      - name: 📦 Install Ollama & Dependencies
+      - name: 📦 Install Voice Cloning Dependencies
         run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-          pip install gradio requests --break-system-packages
+          sudo apt update
+          sudo apt install -y ffmpeg
+          pip install git+https://github.com/coqui-ai/TTS.git --break-system-packages
+          pip install gradio pydub --break-system-packages
 
-      - name: 🧠 Pull Dolphin-Llama3 (8B Smart AI)
-        run: |
-          ollama serve & 
-          sleep 10
-          # यह मॉडल हिंदी बहुत अच्छी समझता है और स्मार्ट है
-          ollama pull dolphin-llama3
-          
       - name: 🌍 Setup Bore (Tunnel)
         run: |
           wget https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz
@@ -35,51 +30,47 @@ jobs:
           chmod +x bore
           sudo mv bore /usr/local/bin/
 
-      - name: ✍️ Create Smart Chat Script (With Memory)
+      - name: 🎙️ Create Voice Cloning Script
         run: |
-          cat << 'EOF' > chat_app.py
+          cat << 'EOF' > voice_app.py
           import gradio as gr
-          import requests
-          import json
+          from TTS.api import TTS
+          import torch
+          import os
 
-          def chat_function(message, history):
-              # History को Ollama के फॉर्मेट में बदलना (Context Memory)
-              formatted_messages = []
-              for user_msg, bot_msg in history:
-                  formatted_messages.append({"role": "user", "content": user_msg})
-                  formatted_messages.append({"role": "assistant", "content": bot_msg})
-              
-              # नया मैसेज जोड़ना
-              formatted_messages.append({"role": "user", "content": message})
+          # Model लोड कर रहे हैं (XTTS-v2) - यह लगभग 2GB का है
+          print("--- Loading XTTS-v2 Voice Model (Hindi Supported) ---")
+          device = "cpu" # GPU नहीं है तो CPU यूज़ करेंगे
+          tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 
-              url = "http://localhost:11434/api/chat"
-              payload = {
-                  "model": "dolphin-llama3",
-                  "messages": formatted_messages,
-                  "stream": False
-              }
-              
-              try:
-                  response = requests.post(url, json=payload)
-                  response_json = response.json()
-                  return response_json['message']['content']
-              except Exception as e:
-                  return f"Error: {str(e)}"
+          def clone_voice(text, audio_file):
+              output_path = "output.wav"
+              # Voice Clone करना (6 second audio sample से)
+              tts.tts_to_file(
+                  text=text,
+                  speaker_wav=audio_file,
+                  language="hi", # हिंदी भाषा सेट है
+                  file_path=output_path
+              )
+              return output_path
 
-          # Gradio ChatInterface जो अपने आप हिस्ट्री संभालता है
-          print("--- Launching Badal's Smart Ghost AI with Memory ---")
-          demo = gr.ChatInterface(
-              fn=chat_function, 
-              title="Badal's Smart Ghost AI 💀",
-              description="मैं सब याद रखता हूँ Badal भाई! जो पूछना है हिंदी में पूछो। 😜",
-              examples=["नमस्ते, तुम कौन हो?", "क्या तुम्हें याद है मैंने पहले क्या कहा था?", "एक मजेदार कहानी सुनाओ हिंदी में।"]
+          print("--- Launching Badal's Voice Factory ---")
+          interface = gr.Interface(
+              fn=clone_voice,
+              inputs=[
+                  gr.Textbox(label="यहाँ वो लिखो जो तुम कहलवाना चाहते हो (Hindi/English)", placeholder="नमस्ते बादल भाई, कैसे हो?"),
+                  gr.Audio(label="जिसकी आवाज़ चुरानी है उसकी 6 सेकंड की क्लिप यहाँ डालो (Audio File)", type="filepath")
+              ],
+              outputs=gr.Audio(label="जनरेटेड आवाज़ (Cloned Voice)"),
+              title="Badal's Ghost Voice Cloner 🎙️💀",
+              description="किसी की भी आवाज़ चुराओ! बस 6 सेकंड का ऑडियो सैंपल दो और हिंदी में कुछ भी कहलवाओ। 😜"
           )
-          
-          demo.launch(server_name="0.0.0.0", server_port=7860)
+          interface.launch(server_name="0.0.0.0", server_port=7860)
           EOF
 
-      - name: 🔥 Start Smart AI Server
+      - name: 🔥 Start Voice Server
         run: |
-          python3 chat_app.py &
-          sleep 15
+          # पहली बार मॉडल डाउनलोड होने में 1-2 मिनट लगेंगे (3Gbps नेट है तो फ़ास्ट होगा)
+          python3 voice_app.py &
+          sleep 30
           bore local 7860 --to bore.pub
