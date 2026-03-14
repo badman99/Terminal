@@ -1,4 +1,4 @@
-name: Badal-Unrestricted-AI-PC
+name: Badal-Smart-Ghost-AI
 on: 
   workflow_dispatch:
 
@@ -6,30 +6,28 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 🚀 Maximize Memory (The 'No-Error' Swap)
+      - name: 🚀 Maximize Memory (Swap)
         run: |
-          # पुराने किसी भी स्वैप को बंद और साफ़ करो
           sudo swapoff -a || true
           sudo rm -f /swapfile || true
-          
-          # नया 6GB स्वैप बनाओ
-          sudo fallocate -l 6G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=6144
+          sudo fallocate -l 8G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
           free -h
 
-      - name: 📦 Install System Dependencies
+      - name: 📦 Install Ollama & Dependencies
         run: |
-          sudo apt update
-          sudo apt install -y python3-pip python3-venv wget git libgl1 libglib2.0-0
+          curl -fsSL https://ollama.com/install.sh | sh
+          pip install gradio requests --break-system-packages
 
-      - name: 🛠️ Install AI Libraries
+      - name: 🧠 Pull Dolphin-Llama3 (8B Smart AI)
         run: |
-          # सीधा सिस्टम पर इंस्टॉल करेंगे ताकि कोई पाथ एरर न आये
-          pip install numpy diffusers transformers accelerate gradio pillow --break-system-packages --ignore-installed
-          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --break-system-packages
-
+          ollama serve & 
+          sleep 10
+          # यह मॉडल हिंदी बहुत अच्छी समझता है और स्मार्ट है
+          ollama pull dolphin-llama3
+          
       - name: 🌍 Setup Bore (Tunnel)
         run: |
           wget https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz
@@ -37,32 +35,51 @@ jobs:
           chmod +x bore
           sudo mv bore /usr/local/bin/
 
-      - name: ✍️ Create AI App Script
+      - name: ✍️ Create Smart Chat Script (With Memory)
         run: |
-          cat << 'EOF' > app.py
-          import torch
-          from diffusers import AutoPipelineForText2Image
+          cat << 'EOF' > chat_app.py
           import gradio as gr
-          import os
+          import requests
+          import json
 
-          print("--- Loading Unrestricted AI Model (SDXL Turbo) ---")
-          # 15GB RAM के लिए ऑप्टिमाइज़्ड
-          pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo", torch_dtype=torch.float32)
+          def chat_function(message, history):
+              # History को Ollama के फॉर्मेट में बदलना (Context Memory)
+              formatted_messages = []
+              for user_msg, bot_msg in history:
+                  formatted_messages.append({"role": "user", "content": user_msg})
+                  formatted_messages.append({"role": "assistant", "content": bot_msg})
+              
+              # नया मैसेज जोड़ना
+              formatted_messages.append({"role": "user", "content": message})
+
+              url = "http://localhost:11434/api/chat"
+              payload = {
+                  "model": "dolphin-llama3",
+                  "messages": formatted_messages,
+                  "stream": False
+              }
+              
+              try:
+                  response = requests.post(url, json=payload)
+                  response_json = response.json()
+                  return response_json['message']['content']
+              except Exception as e:
+                  return f"Error: {str(e)}"
+
+          # Gradio ChatInterface जो अपने आप हिस्ट्री संभालता है
+          print("--- Launching Badal's Smart Ghost AI with Memory ---")
+          demo = gr.ChatInterface(
+              fn=chat_function, 
+              title="Badal's Smart Ghost AI 💀",
+              description="मैं सब याद रखता हूँ Badal भाई! जो पूछना है हिंदी में पूछो। 😜",
+              examples=["नमस्ते, तुम कौन हो?", "क्या तुम्हें याद है मैंने पहले क्या कहा था?", "एक मजेदार कहानी सुनाओ हिंदी में।"]
+          )
           
-          def generate(prompt):
-              # CPU के लिए 1-step काफी है
-              image = pipe(prompt=prompt, num_inference_steps=9, guidance_scale=7.5).images[0]
-              return image
-
-          print("--- Launching Badal's AI Interface ---")
-          demo = gr.Interface(fn=generate, inputs="text", outputs="image", title="Badal's Unrestricted AI 🎨")
           demo.launch(server_name="0.0.0.0", server_port=7860)
           EOF
 
-      - name: 🔥 Start AI & Tunnel
+      - name: 🔥 Start Smart AI Server
         run: |
-          # प्रोग्राम को बैकग्राउंड में चलाओ
-          python3 app.py &
+          python3 chat_app.py &
           sleep 15
-          # पब्लिक लिंक जनरेट करो
           bore local 7860 --to bore.pub
