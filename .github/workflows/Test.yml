@@ -6,9 +6,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 🚀 Maximize Memory (Swap Space)
+      - name: 🚀 Maximize Memory (The 'No-Error' Swap)
         run: |
-          sudo fallocate -l 6G /swapfile
+          # पुराने किसी भी स्वैप को बंद और साफ़ करो
+          sudo swapoff -a || true
+          sudo rm -f /swapfile || true
+          
+          # नया 6GB स्वैप बनाओ
+          sudo fallocate -l 6G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=6144
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
@@ -19,8 +24,9 @@ jobs:
           sudo apt update
           sudo apt install -y python3-pip python3-venv wget git libgl1 libglib2.0-0
 
-      - name: 🛠️ Install AI Libraries (Fast Mode)
+      - name: 🛠️ Install AI Libraries
         run: |
+          # सीधा सिस्टम पर इंस्टॉल करेंगे ताकि कोई पाथ एरर न आये
           pip install numpy diffusers transformers accelerate gradio pillow --break-system-packages --ignore-installed
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --break-system-packages
 
@@ -37,25 +43,26 @@ jobs:
           import torch
           from diffusers import AutoPipelineForText2Image
           import gradio as gr
+          import os
 
-          # Using float16 and CPU optimization to save RAM
           print("--- Loading Unrestricted AI Model (SDXL Turbo) ---")
+          # 15GB RAM के लिए ऑप्टिमाइज़्ड
           pipe = AutoPipelineForText2Image.from_pretrained("stabilityai/sdxl-turbo", torch_dtype=torch.float32)
           
           def generate(prompt):
-              # Fast 1-step generation for CPU
+              # CPU के लिए 1-step काफी है
               image = pipe(prompt=prompt, num_inference_steps=1, guidance_scale=0.0).images[0]
               return image
 
-          print("--- Launching Badal's UI ---")
+          print("--- Launching Badal's AI Interface ---")
           demo = gr.Interface(fn=generate, inputs="text", outputs="image", title="Badal's Unrestricted AI 🎨")
           demo.launch(server_name="0.0.0.0", server_port=7860)
           EOF
 
       - name: 🔥 Start AI & Tunnel
         run: |
-          # Start AI in background
+          # प्रोग्राम को बैकग्राउंड में चलाओ
           python3 app.py &
-          sleep 10
-          # Connect Bore and show the link clearly
+          sleep 15
+          # पब्लिक लिंक जनरेट करो
           bore local 7860 --to bore.pub
