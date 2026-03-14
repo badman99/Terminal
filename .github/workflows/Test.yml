@@ -6,6 +6,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: 🐍 Setup Python 3.10 (The Life Saver)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10' # अब कोई एरर नहीं आएगा! 😎
+
       - name: 🚀 Maximize Memory (Swap)
         run: |
           sudo swapoff -a || true
@@ -20,8 +25,10 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y ffmpeg
-          pip install git+https://github.com/coqui-ai/TTS.git --break-system-packages
-          pip install gradio pydub --break-system-packages
+          # Python 3.10 में --break-system-packages की ज़रूरत नहीं है
+          pip install --upgrade pip
+          pip install git+https://github.com/coqui-ai/TTS.git
+          pip install gradio pydub
 
       - name: 🌍 Setup Bore (Tunnel)
         run: |
@@ -38,18 +45,16 @@ jobs:
           import torch
           import os
 
-          # Model लोड कर रहे हैं (XTTS-v2) - यह लगभग 2GB का है
           print("--- Loading XTTS-v2 Voice Model (Hindi Supported) ---")
-          device = "cpu" # GPU नहीं है तो CPU यूज़ करेंगे
-          tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+          # मॉडल डाउनलोड और लोड हो रहा है
+          tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to("cpu")
 
           def clone_voice(text, audio_file):
               output_path = "output.wav"
-              # Voice Clone करना (6 second audio sample से)
               tts.tts_to_file(
                   text=text,
                   speaker_wav=audio_file,
-                  language="hi", # हिंदी भाषा सेट है
+                  language="hi",
                   file_path=output_path
               )
               return output_path
@@ -58,19 +63,17 @@ jobs:
           interface = gr.Interface(
               fn=clone_voice,
               inputs=[
-                  gr.Textbox(label="यहाँ वो लिखो जो तुम कहलवाना चाहते हो (Hindi/English)", placeholder="नमस्ते बादल भाई, कैसे हो?"),
-                  gr.Audio(label="जिसकी आवाज़ चुरानी है उसकी 6 सेकंड की क्लिप यहाँ डालो (Audio File)", type="filepath")
+                  gr.Textbox(label="यहाँ वो लिखो जो तुम कहलवाना चाहते हो (Hindi)", placeholder="नमस्ते बादल भाई!"),
+                  gr.Audio(label="6 सेकंड की ऑडियो क्लिप यहाँ डालो", type="filepath")
               ],
-              outputs=gr.Audio(label="जनरेटेड आवाज़ (Cloned Voice)"),
-              title="Badal's Ghost Voice Cloner 🎙️💀",
-              description="किसी की भी आवाज़ चुराओ! बस 6 सेकंड का ऑडियो सैंपल दो और हिंदी में कुछ भी कहलवाओ। 😜"
+              outputs=gr.Audio(label="जनरेटेड आवाज़"),
+              title="Badal's Ghost Voice Cloner 🎙️💀"
           )
           interface.launch(server_name="0.0.0.0", server_port=7860)
           EOF
 
       - name: 🔥 Start Voice Server
         run: |
-          # पहली बार मॉडल डाउनलोड होने में 1-2 मिनट लगेंगे (3Gbps नेट है तो फ़ास्ट होगा)
           python3 voice_app.py &
-          sleep 30
+          sleep 40
           bore local 7860 --to bore.pub
