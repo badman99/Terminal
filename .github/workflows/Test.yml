@@ -1,6 +1,8 @@
 name: Badal-Voice-Clone-AI
 on: 
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
