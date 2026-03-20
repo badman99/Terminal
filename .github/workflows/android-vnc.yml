@@ -77,7 +77,7 @@ jobs:
           DISPLAY: :1                    # ✅ Same display jahan VNC hai!
         with:
           api-level: 30
-          target: google_apis
+          target: google_apis_playstore
           arch: x86_64
           ram-size: 4096M
           # ✅ -no-window HATA DIYA! Ab window banegi screen pe!
