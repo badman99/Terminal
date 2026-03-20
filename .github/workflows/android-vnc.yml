@@ -1,12 +1,12 @@
 name: 🤖 Android Emulator + VNC
 
 on:
-  workflow_dispatch: # Haath se button dabao aur chalu karo
+  workflow_dispatch:
 
 jobs:
   android-vnc:
-    runs-on: macos-13      # ✅ Intel Mac = HVF support hai!
-    timeout-minutes: 350   # 5 hours 50 min
+    runs-on: ubuntu-latest     # ✅ Ubuntu = Fast + Free + KVM support
+    timeout-minutes: 350
 
     steps:
 
@@ -14,56 +14,68 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      # Step 2 - Java Setup
+      # Step 2 - KVM Enable karo (Yahi tha missing piece! 😅)
+      - name: ⚡ Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Step 3 - Java Setup
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # Step 3 - F-Droid APK Download
+      # Step 4 - F-Droid APK Download
       - name: 📦 Download F-Droid APK
         run: |
           curl -L https://f-droid.org/F-Droid.apk -o fdroid.apk
-          echo "✅ F-Droid APK Downloaded!"
+          echo "✅ F-Droid Downloaded!"
 
-      # Step 4 - Android Emulator Start + Full Setup
+      # Step 5 - Android Emulator Start
       - name: 📱 Android Emulator + VNC + bore
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30          # ✅ Intel pe 30 kaam karta hai
+          api-level: 30
           target: google_apis
-          arch: x86_64           # ✅ Intel = x86_64 sahi hai
+          arch: x86_64           # ✅ Ubuntu Intel = x86_64
           ram-size: 4096M
-          emulator-options: -no-snapshot-save -noaudio -no-boot-anim
+          emulator-options: -no-snapshot-save -noaudio -no-boot-anim -no-window
           disable-animations: true
           script: |
-
             echo "✅ Emulator Ready!"
 
             # F-Droid install karo
             adb install fdroid.apk
             echo "✅ F-Droid Installed!"
 
-            # F-Droid kholo emulator mein
+            # F-Droid kholo
             adb shell monkey -p org.fdroid.fdroid 1
             echo "✅ F-Droid Open!"
 
-            # VNC Server install karo
-            brew install tiger-vnc
-            mkdir -p ~/.vnc
+            # VNC ke liye packages install karo
+            sudo apt-get install -y x11vnc xvfb
+            echo "✅ VNC Packages Installed!"
 
-            # Password set karo - 123456
-            echo "123456" | vncpasswd -f > ~/.vnc/passwd
-            chmod 600 ~/.vnc/passwd
+            # Virtual Display start karo
+            Xvfb :99 -screen 0 1280x720x24 &
+            export DISPLAY=:99
+            sleep 3
 
-            # VNC Start karo
-            vncserver :1 -geometry 1280x720 -localhost no
-            export DISPLAY=:1
-            echo "✅ VNC Started on port 5901!"
+            # Android emulator display redirect karo
+            EMULATOR_PID=$(pgrep -f "qemu-system" | head -1)
+            echo "Emulator PID: $EMULATOR_PID"
 
-            # bore install karo - macOS Intel version
-            curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-apple-darwin.tar.gz | tar zx -C /usr/local/bin
+            # VNC Server start karo - no password for simplicity
+            x11vnc -display :99 -nopw -forever -shared &
+            sleep 2
+            echo "✅ VNC Started on port 5900!"
+
+            # bore install karo - Linux version
+            curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx -C /usr/local/bin
+            chmod +x /usr/local/bin/bore
             echo "✅ bore Ready!"
 
             echo "======================================"
@@ -71,13 +83,13 @@ jobs:
             echo "App    : MultiVNC ya RealVNC"
             echo "Host   : bore.pub"
             echo "Port   : (neeche wala number dekho)"
-            echo "Pass   : 123456"
+            echo "Pass   : (koi password nahi)"
             echo "======================================"
 
-            # Tunnel shuru karo - yahan port number dikhega
-            bore local 5901 --to bore.pub
+            # Tunnel start karo
+            bore local 5900 --to bore.pub
 
-      # Step 5 - SSH via tmate
+      # Step 6 - SSH via tmate
       - name: 🔐 SSH Access via Termux
         uses: mxschmitt/action-tmate@v3
         if: always()
