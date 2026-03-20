@@ -81,7 +81,7 @@ jobs:
           arch: x86_64
           ram-size: 4096M
           # ✅ -no-window HATA DIYA! Ab window banegi screen pe!
-          emulator-options: -no-snapshot-save -noaudio -no-boot-anim -gpu swiftshader_indirect
+          emulator-options: -no-snapshot-save -noaudio -no-boot-anim -gpu swiftshader_indirect -prop qemu.hw.mainkeys=0
           disable-animations: true
           script: |
             echo "✅ Emulator chal raha hai :1 display pe!"
