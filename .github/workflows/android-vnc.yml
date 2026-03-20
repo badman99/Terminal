@@ -76,10 +76,11 @@ jobs:
         env:
           DISPLAY: :1                    # ✅ Same display jahan VNC hai!
         with:
-          api-level: 30
+          api-level: 28
           target: google_apis_playstore
           arch: x86_64
           ram-size: 4096M
+          heap-size: 1024M
           # ✅ -no-window HATA DIYA! Ab window banegi screen pe!
           emulator-options: -no-snapshot-save -noaudio -no-boot-anim -gpu swiftshader_indirect -prop qemu.hw.mainkeys=0
           disable-animations: true
