@@ -5,8 +5,8 @@ on:
 
 jobs:
   android-vnc:
-    runs-on: macos-latest
-    timeout-minutes: 350 # 5 hours 50 min
+    runs-on: macos-13      # ✅ Intel Mac = HVF support hai!
+    timeout-minutes: 350   # 5 hours 50 min
 
     steps:
 
@@ -21,7 +21,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Step 3 - F-Droid APK Download (Open Source App Store)
+      # Step 3 - F-Droid APK Download
       - name: 📦 Download F-Droid APK
         run: |
           curl -L https://f-droid.org/F-Droid.apk -o fdroid.apk
@@ -31,9 +31,9 @@ jobs:
       - name: 📱 Android Emulator + VNC + bore
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 33         # ✅ API 33 = arm64 support hai
-          target: google_apis   # ✅ Google APIs included
-          arch: arm64-v8a       # ✅ M1 Mac ke liye sahi architecture
+          api-level: 30          # ✅ Intel pe 30 kaam karta hai
+          target: google_apis
+          arch: x86_64           # ✅ Intel = x86_64 sahi hai
           ram-size: 4096M
           emulator-options: -no-snapshot-save -noaudio -no-boot-anim
           disable-animations: true
@@ -62,8 +62,8 @@ jobs:
             export DISPLAY=:1
             echo "✅ VNC Started on port 5901!"
 
-            # bore install karo - macOS ARM version
-            curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-aarch64-apple-darwin.tar.gz | tar zx -C /usr/local/bin
+            # bore install karo - macOS Intel version
+            curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-apple-darwin.tar.gz | tar zx -C /usr/local/bin
             echo "✅ bore Ready!"
 
             echo "======================================"
@@ -77,7 +77,7 @@ jobs:
             # Tunnel shuru karo - yahan port number dikhega
             bore local 5901 --to bore.pub
 
-      # Step 5 - SSH via tmate (Termux se connect karne ke liye)
+      # Step 5 - SSH via tmate
       - name: 🔐 SSH Access via Termux
         uses: mxschmitt/action-tmate@v3
-        if: always() # Fail ho ya pass - SSH hamesha milega
+        if: always()
