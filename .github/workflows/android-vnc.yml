@@ -14,6 +14,15 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
+
+      - name: 💾 Restore Previous Data
+        run: |
+          if [ -f emulator-data/backup.ab ]; then
+            cp emulator-data/backup.ab ~/backup.ab
+            echo "✅ Previous backup mila!"
+          else
+            echo "⚠️ Pehli baar chal raha hai — koi backup nahi!"
+          fi
       - name: ⚡ Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -100,6 +109,23 @@ jobs:
             # Session chal ti rahe
             sleep 18000
 
+
+      - name: 💾 Save Emulator Data
+        if: always()
+        run: |
+          mkdir -p emulator-data
+
+          # ADB backup lo
+          adb backup -apk -all -f emulator-data/backup.ab
+          echo "✅ Backup liya!"
+
+      - name: 📤 Upload Backup Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-backup
+          path: emulator-data/
+          retention-days: 90
       - name: 🔐 SSH via tmate
         uses: mxschmitt/action-tmate@v3
         if: always()
