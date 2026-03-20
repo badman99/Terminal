@@ -29,7 +29,7 @@ jobs:
       - name: 📦 Install Display + VNC packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb x11vnc fluxbox wmctrl
+          sudo apt-get install -y xvfb x11vnc fluxbox wmctrl libpulse0 libnss3 libglu1-mesa
           echo "✅ Packages installed!"
 
       - name: 📦 Download F-Droid APK
