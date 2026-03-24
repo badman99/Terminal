@@ -51,10 +51,10 @@ jobs:
           sleep 3
           echo "✅ Display + Fluxbox Ready!"
 
-          # VNC start (-loop aur -noxkb add kiya hai stability ke liye)
-          x11vnc -display :1 -nopw -forever -shared -bg -loop -noxkb -noxrecord -noxfixes -o /tmp/x11vnc.log
-          sleep 2
-          echo "✅ VNC Started!"
+          # VNC start (-bg hata kar aakhir mein & laga diya hai, ab workflow nahi atkega)
+          x11vnc -display :1 -nopw -forever -shared -loop -noxkb -noxrecord -noxfixes -o /tmp/x11vnc.log > /dev/null 2>&1 &
+          sleep 5
+          echo "✅ VNC Started Background Mein!"
 
       - name: 🌐 Start bore Tunnel
         run: |
